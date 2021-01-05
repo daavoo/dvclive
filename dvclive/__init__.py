@@ -6,9 +6,12 @@ import time
 from collections import OrderedDict
 from typing import Dict
 
+from dvclive import env
 from dvclive.error import DvcLiveError, InitializationError
+from dvclive.log import log_setup
 from dvclive.serialize import update_tsv, write_json
 
+log_setup()
 logger = logging.getLogger(__name__)
 
 __version__ = "0.0.1"
@@ -17,8 +20,6 @@ _metric_logger = None
 
 class DvcLive:
     DEFAULT_DIR = "dvclive"
-    DVCLIVE_PATH = "DVCLIVE_PATH"
-    DVCLIVE_SUMMARY = "DVCLIVE_SUMMARY"
 
     def __init__(
         self,
@@ -28,6 +29,7 @@ class DvcLive:
         report=True,
         dump_latest=True,
     ):
+        logger.debug("Initializing dvclive in path: '%s'.", directory)
         self._dir = directory
         self._step = step
         self._report = report
@@ -50,12 +52,14 @@ class DvcLive:
 
     @staticmethod
     def from_env():
-        if DvcLive.DVCLIVE_PATH in os.environ:
-            directory = os.environ[DvcLive.DVCLIVE_PATH]
-            dump_latest = bool(
-                int(os.environ.get(DvcLive.DVCLIVE_SUMMARY, "0"))
+        if env.DVCLIVE_PATH in os.environ:
+            logger.debug(
+                "'%s' found, initializing from environmental variables.",
+                env.DVCLIVE_PATH,
             )
-            return DvcLive(directory, dump_latest=dump_latest, report=True)
+            directory = os.environ[env.DVCLIVE_PATH]
+            dump_latest = bool(int(os.environ.get(env.DVCLIVE_SUMMARY, "0")))
+            return DvcLive(directory, dump_latest=dump_latest, report=False)
         return None
 
     @property
@@ -93,8 +97,10 @@ class DvcLive:
 
     def log(self, name: str, val: float, step: int = None):
         if name in self._metrics.keys():
-            logger.info(
-                f"Found {name} in metrics dir, assuming new epoch started"
+            logger.debug(
+                "'%s' already logged in current step, "
+                "assuming new step started",
+                name,
             )
             self.next_step()
 

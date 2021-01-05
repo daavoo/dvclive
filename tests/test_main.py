@@ -1,11 +1,13 @@
 import csv
 import json
+import logging
 import os
 
 import pytest
 from funcy import last
 
 import dvclive
+from dvclive import env
 
 
 def read_logs(path):
@@ -127,11 +129,18 @@ def test_custom_steps(tmp_dir):  # pylint: disable=unused-argument
 
 
 @pytest.mark.parametrize("summary", [True, False])
-def test_init_from_env(tmp_dir, summary):  # pylint: disable=unused-argument
-    os.environ[dvclive.DvcLive.DVCLIVE_PATH] = "logs"
-    os.environ[dvclive.DvcLive.DVCLIVE_SUMMARY] = str(int(summary))
+@pytest.mark.parametrize(
+    "log_level", [logging.INFO, logging.WARNING, logging.DEBUG, logging.ERROR]
+)
+def test_init_from_env(
+    tmp_dir, summary, log_level
+):  # pylint: disable=unused-argument
+    os.environ[env.DVCLIVE_PATH] = "logs"
+    os.environ[env.DVCLIVE_SUMMARY] = str(int(summary))
+    os.environ[env.DVCLIVE_LOG_LEVEL] = str(log_level)
 
     dvclive.log("m", 0.1)
 
     assert dvclive._metric_logger._dir == "logs"
     assert dvclive._metric_logger._dump_latest == summary
+    assert dvclive.logger.level == log_level
